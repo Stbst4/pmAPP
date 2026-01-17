@@ -25,7 +25,8 @@ export interface TodoItem {
 export interface Note {
   id: string
   title: string
-  content: string
+  content: string           // JSON string for TipTap
+  contentVersion?: 1 | 2    // 1=plain text, 2=TipTap JSON
   updatedAt: number
 }
 
@@ -39,3 +40,14 @@ export const TASK_STATUSES: { id: TaskStatus; label: string }[] = [
 ]
 
 export const MAIN_STATUSES: TaskStatus[] = ['todo', 'in-progress', 'complete']
+
+export interface CalendarEvent {
+  id: string
+  title: string
+  description?: string
+  date: number           // Timestamp (midnight)
+  startTime?: string     // "HH:MM" format
+  endTime?: string       // "HH:MM" format
+  color?: string         // Optional custom color
+  createdAt: number
+}

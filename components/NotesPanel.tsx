@@ -1,8 +1,9 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useRef } from 'react'
 import { useNotes } from '@/hooks/useNotes'
 import { cn, formatDate } from '@/lib/utils'
+import { RichTextEditor } from './RichTextEditor'
 
 export function NotesPanel() {
   const {
@@ -17,15 +18,6 @@ export function NotesPanel() {
 
   const [isEditingTitle, setIsEditingTitle] = useState(false)
   const [editTitle, setEditTitle] = useState('')
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-
-  // Auto-resize textarea
-  useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto'
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`
-    }
-  }, [activeNote?.content])
 
   // Debounced save
   const saveTimeoutRef = useRef<NodeJS.Timeout>()
@@ -38,7 +30,7 @@ export function NotesPanel() {
     }
 
     saveTimeoutRef.current = setTimeout(() => {
-      updateNote(activeNoteId, { content })
+      updateNote(activeNoteId, { content, contentVersion: 2 })
     }, 300)
   }
 
@@ -168,18 +160,12 @@ export function NotesPanel() {
           </p>
         </div>
 
-        {/* Textarea */}
-        <div className="flex-1 overflow-y-auto px-4 pb-4">
-          <textarea
-            ref={textareaRef}
-            value={activeNote.content}
-            onChange={(e) => handleContentChange(e.target.value)}
+        {/* Rich Text Editor */}
+        <div className="flex-1 overflow-hidden relative">
+          <RichTextEditor
+            content={activeNote.content}
+            onChange={handleContentChange}
             placeholder="Start writing..."
-            className={cn(
-              'w-full min-h-full bg-transparent text-sm text-text-primary',
-              'placeholder:text-text-muted resize-none focus:outline-none',
-              'leading-relaxed'
-            )}
           />
         </div>
       </div>

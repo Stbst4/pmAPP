@@ -1,13 +1,74 @@
 'use client'
 
-import { useCallback, useState, useEffect } from 'react'
+import { useCallback, useEffect } from 'react'
 import { Note } from '@/types'
 import { useLocalStorage } from './useLocalStorage'
 import { generateId } from '@/lib/utils'
 
+// Convert plain text content to TipTap JSON format
+function convertPlainTextToTipTap(text: string): string {
+  if (!text) {
+    return JSON.stringify({
+      type: 'doc',
+      content: [{ type: 'paragraph' }]
+    })
+  }
+
+  const paragraphs = text.split('\n').map(line => {
+    if (line.trim() === '') {
+      return { type: 'paragraph' }
+    }
+    return {
+      type: 'paragraph',
+      content: [{ type: 'text', text: line }]
+    }
+  })
+
+  return JSON.stringify({
+    type: 'doc',
+    content: paragraphs.length > 0 ? paragraphs : [{ type: 'paragraph' }]
+  })
+}
+
+// Migrate notes from plain text (v1) to TipTap JSON (v2)
+function migrateNotes(notes: Note[]): Note[] {
+  return notes.map(note => {
+    if (note.contentVersion === 2) {
+      return note // Already migrated
+    }
+
+    // Check if content is already valid TipTap JSON
+    try {
+      const parsed = JSON.parse(note.content)
+      if (parsed.type === 'doc') {
+        return { ...note, contentVersion: 2 }
+      }
+    } catch {
+      // Not JSON, needs migration
+    }
+
+    // Migrate plain text to TipTap JSON
+    return {
+      ...note,
+      content: convertPlainTextToTipTap(note.content),
+      contentVersion: 2
+    }
+  })
+}
+
 export function useNotes() {
   const [notes, setNotes] = useLocalStorage<Note[]>('flowstate-notes', [])
   const [activeNoteId, setActiveNoteId] = useLocalStorage<string | null>('flowstate-active-note', null)
+
+  // Migrate existing notes on load
+  useEffect(() => {
+    if (notes.length > 0) {
+      const needsMigration = notes.some(note => note.contentVersion !== 2)
+      if (needsMigration) {
+        setNotes(migrateNotes(notes))
+      }
+    }
+  }, []) // Only run once on mount
 
   // Ensure there's always at least one note
   useEffect(() => {
@@ -15,7 +76,11 @@ export function useNotes() {
       const defaultNote: Note = {
         id: generateId(),
         title: 'Untitled',
-        content: '',
+        content: JSON.stringify({
+          type: 'doc',
+          content: [{ type: 'paragraph' }]
+        }),
+        contentVersion: 2,
         updatedAt: Date.now(),
       }
       setNotes([defaultNote])
@@ -31,7 +96,11 @@ export function useNotes() {
     const newNote: Note = {
       id: generateId(),
       title: 'Untitled',
-      content: '',
+      content: JSON.stringify({
+        type: 'doc',
+        content: [{ type: 'paragraph' }]
+      }),
+      contentVersion: 2,
       updatedAt: Date.now(),
     }
     setNotes(prev => [...prev, newNote])
